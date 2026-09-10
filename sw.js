@@ -9,9 +9,9 @@
  *  음성 캐시(AUDIO)는 파일명이 바뀌지 않는 한 그대로 유지합니다.
  */
 
-const SHELL_VER = 'v1';
+const SHELL_VER = 'v2';   // 구절 음성에서 앞부분 장절 낭독 제거
 const SHELL = `mv3-shell-${SHELL_VER}`;
-const AUDIO = 'mv3-audio-v1';
+const AUDIO = 'mv3-audio-v2';
 const FONT  = 'mv3-font-v1';
 
 const SHELL_FILES = [
