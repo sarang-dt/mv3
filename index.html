@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>사역반 성경암송</title>
+    <meta name="description" content="사랑의교회 사역반 성경 구절을 듣고 반복 재생하며 암송하는 앱">
+
+    <!-- 홈 화면에 추가했을 때 앱처럼 동작하도록 -->
+    <meta name="theme-color" content="#07090f">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
+    <!-- iOS (Safari 는 manifest 를 일부만 따르므로 별도 지정) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="성경암송">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            color-scheme: dark;          /* 다크 전용 앱 */
+            --bg:            #07090f;
+            --bg2:           #0c1020;
+            --bg3:           #111830;
+            --surface:       rgba(255,255,255,0.04);
+            --surface2:      rgba(255,255,255,0.07);
+            --border:        rgba(255,255,255,0.07);
+            --border2:       rgba(255,255,255,0.12);
+            --accent:        #6ed48a;
+            --accent-rgb:    110,212,138;
+            --accent-deep:   #3fa863;
+            --accent-deep2:  #2f8a4b;
+            --on-accent:     #04180c;
+            --accent-soft:   rgba(110,212,138,0.12);
+            --accent-border: rgba(110,212,138,0.28);
+            --accent-glow:   rgba(110,212,138,0.18);
+            --text1:         #edf0f8;
+            --text2:         #8898b8;
+            --text3:         #4a5a78;
+            --green:         #6ec87a;
+            --red:           #e07070;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        html,body { height:100%; overflow:hidden; }
+
+        body {
+            font-family: 'Noto Sans KR', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text1);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+        }
+
+        /* ── App Shell ─────────────────────────────── */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: -webkit-fill-available;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ────────────────────────────────── */
+        .header {
+            flex-shrink: 0;
+            padding: 16px 20px 12px;
+            padding-top: max(16px, env(safe-area-inset-top));
+            background: rgba(7,9,15,0.9);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 11px;
+        }
+        .header-logo {
+            height: 28px;
+            width: auto;
+            flex-shrink: 0;
+        }
+        .brand-divider {
+            width: 1px;
+            height: 19px;
+            background: var(--border2);
+            flex-shrink: 0;
+        }
+        .header h1 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text1);
+            letter-spacing: -0.03em;
+            white-space: nowrap;
+        }
+        /* 좁은 화면에서 한 줄이 넘치지 않도록 */
+        @media (max-width: 359px) {
+            .header-logo { height: 24px; }
+            .header h1   { font-size: 0.94rem; }
+            .header-brand { gap: 8px; }
+        }
+
+        /* ── Segmented Control (설정 시트에서 사용) ──── */
+        .seg {
+            flex: 1;
+            display: flex;
+            gap: 3px;
+            padding: 3px;
+            border-radius: 12px;
+            border: 1px solid var(--border2);
+            background: var(--surface);
+        }
+        .seg-btn {
+            flex: 1;
+            padding: 6px 0;
+            border: none;
+            border-radius: 9px;
+            background: transparent;
+            color: var(--text2);
+            font-size: 0.76rem;
+            font-weight: 600;
+            font-family: inherit;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+        .seg-btn.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            box-shadow: inset 0 0 0 1px var(--accent-border);
+        }
+        .seg-btn:active { transform: scale(0.95); }
+
+        /* ── Week Tabs ──────────────────────────────── */
+        .week-tabs {
+            flex-shrink: 0;
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 14px;
+            gap: 6px;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .week-tabs::-webkit-scrollbar { display:none; }
+
+        .wtab {
+            flex-shrink: 0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border2);
+            background: transparent;
+            color: var(--text2);
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .wtab.active {
+            background: var(--accent);
+            color: var(--on-accent);
+            border-color: var(--accent);
+            box-shadow: 0 2px 14px rgba(var(--accent-rgb),0.35);
+        }
+
+        /* ── Scrollable Content ─────────────────────── */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px 14px 8px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .content::-webkit-scrollbar { display:none; }
+
+        /* Theme Row */
+        .theme-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .seg-btn:disabled {
+            opacity: 0.28;
+            cursor: not-allowed;
+        }
+        .theme-badge {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--accent-border);
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+
+        /* Verse Card */
+        .verse-card {
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            padding: 16px 16px 14px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .verse-card.playing {
+            border-color: var(--accent);
+            background: rgba(var(--accent-rgb),0.055);
+            box-shadow: 0 0 28px var(--accent-glow), inset 0 0 20px rgba(var(--accent-rgb),0.03);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .verse-num {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            border-radius: 8px;
+            padding: 2px 8px;
+            letter-spacing: 0.04em;
+        }
+        .verse-ref {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .card-play-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid var(--border2);
+            background: var(--surface2);
+            color: var(--text2);
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .verse-card.playing .card-play-btn {
+            background: var(--accent);
+            color: var(--on-accent);
+            border-color: var(--accent);
+        }
+        .card-play-btn:active { transform: scale(0.92); }
+
+        .verse-text {
+            font-size: 1.02rem;
+            line-height: 2.0;
+            color: #c8d4e8;
+            word-break: keep-all;
+            font-weight: 400;
+        }
+        .verse-text.en {
+            line-height: 1.8;
+            letter-spacing: -0.005em;
+        }
+        .verse-card.playing .verse-text {
+            color: var(--text1);
+        }
+
+        /* Playing pulse animation */
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 20px var(--accent-glow); }
+            50%       { box-shadow: 0 0 36px rgba(var(--accent-rgb),0.28); }
+        }
+        .verse-card.playing { animation: pulse-border 2.5s ease-in-out infinite; }
+
+        /* ── Player ────────────────────────────────── */
+        .player {
+            flex-shrink: 0;
+            background: rgba(7,9,15,0.96);
+            border-top: 1px solid var(--border);
+            padding: 12px 18px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            backdrop-filter: blur(16px);
+        }
+
+        /* Progress */
+        .progress-area { margin-bottom: 10px; }
+        .progress-track {
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+        .progress-track:hover { height: 5px; margin: -1px 0; }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-deep), var(--accent));
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            right: -5px; top: 50%;
+            transform: translateY(-50%);
+            width: 11px; height: 11px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .progress-track:hover .progress-fill::after { opacity: 1; }
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.72rem;
+            color: var(--text3);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .cbtn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--border2);
+            background: var(--surface);
+            color: var(--text2);
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            font-family: inherit;
+            font-weight: 700;
+        }
+        .cbtn:hover { background: var(--surface2); color: var(--text1); }
+        .cbtn:active { transform: scale(0.93); }
+
+        .cbtn.play-main {
+            width: 64px; height: 64px;
+            background: linear-gradient(145deg, var(--accent), var(--accent-deep2));
+            color: var(--on-accent);
+            font-size: 1.5rem;
+            border: none;
+            box-shadow: 0 4px 20px rgba(var(--accent-rgb),0.4);
+        }
+        .cbtn.play-main:hover { box-shadow: 0 4px 28px rgba(var(--accent-rgb),0.55); }
+        .cbtn.play-main:active { background: linear-gradient(145deg, #d9a840, #b07820); }
+
+        .cbtn.speed { font-size: 0.75rem; letter-spacing:-0.03em; }
+
+        .repeat-wrap { position: relative; }
+        .rbadge {
+            position: absolute;
+            top: -3px; right: -3px;
+            background: var(--accent);
+            color: var(--on-accent);
+            font-size: 0.6rem;
+            font-weight: 800;
+            min-width: 17px; height: 17px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 3px;
+            pointer-events: none;
+        }
+
+        /* Status */
+        .status {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text3);
+            min-height: 1.1em;
+            letter-spacing: 0.01em;
+        }
+        .status.playing { color: var(--green); }
+        .status.error   { color: var(--red); }
+        .status.warn    { color: var(--accent); opacity: 0.8; }
+
+        /* ── 설정 진입 바 ──────────────────────────── */
+        .settings-bar {
+            width: 100%;
+            margin-top: 11px;
+            padding: 9px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border2);
+            background: transparent;
+            color: var(--text2);
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+        .settings-bar:hover { background: var(--surface); color: var(--text1); }
+        .settings-bar:active { transform: scale(0.985); }
+        .settings-bar svg { flex-shrink: 0; opacity: 0.75; }
+
+        /* ── Bottom Sheet Modal ─────────────────────── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 200;
+        }
+        .overlay.show { display: flex; }
+
+        .sheet {
+            width: 100%;
+            max-width: 520px;
+            background: #111828;
+            border-radius: 24px 24px 0 0;
+            padding: 20px 18px;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            border: 1px solid var(--border2);
+            border-bottom: none;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+        .set-group { margin-bottom: 15px; }
+        .set-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text2);
+            letter-spacing: 0.02em;
+            margin-bottom: 7px;
+            padding-left: 2px;
+        }
+        .sheet-handle {
+            width: 36px; height: 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .sheet h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text1);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .repeat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .ropt {
+            padding: 13px 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border2);
+            background: var(--surface);
+            color: var(--text1);
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .ropt:hover { background: var(--surface2); }
+        .ropt.sel {
+            background: var(--accent-soft);
+            border-color: var(--accent-border);
+            color: var(--accent);
+        }
+        .ropt.inf { font-size: 1.4rem; padding: 9px 6px; }
+
+        .sheet-close {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            color: var(--accent);
+            font-size: 0.92rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .sheet-close:hover { background: rgba(var(--accent-rgb),0.2); }
+
+        /* ── Waveform animation for playing state ─── */
+        .wave-icon {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+        .wave-icon span {
+            display: block;
+            width: 3px;
+            background: var(--green);
+            border-radius: 2px;
+            animation: wave 0.8s ease-in-out infinite alternate;
+        }
+        .wave-icon span:nth-child(1) { height: 6px;  animation-delay: 0s; }
+        .wave-icon span:nth-child(2) { height: 14px; animation-delay: 0.15s; }
+        .wave-icon span:nth-child(3) { height: 9px;  animation-delay: 0.3s; }
+        .wave-icon span:nth-child(4) { height: 12px; animation-delay: 0.1s; }
+        @keyframes wave {
+            from { transform: scaleY(0.4); }
+            to   { transform: scaleY(1); }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-brand">
+            <img class="header-logo" src="logo_Sarang.png" alt="남가주사랑의교회"
+                 width="496" height="115">
+            <span class="brand-divider"></span>
+            <h1>사역반 성경암송</h1>
+        </div>
+    </div>
+
+    <!-- Week Tabs -->
+    <div class="week-tabs" id="weekTabs"></div>
+
+    <!-- Verse Content -->
+    <div class="content" id="content"></div>
+
+    <!-- Player -->
+    <div class="player">
+        <!-- Progress -->
+        <div class="progress-area">
+            <div class="progress-track" id="progressTrack">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="time-row">
+                <span id="curTime">0:00</span>
+                <span id="totTime">0:00</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="cbtn speed" id="speedBtn" aria-label="재생속도">1x</button>
+            <button class="cbtn" id="prevBtn" aria-label="이전">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="5" y="5" width="2.5" height="14" rx="1.2"/>
+                    <polygon points="19,5 9,12 19,19"/>
+                </svg>
+            </button>
+            <button class="cbtn play-main" id="playBtn" aria-label="재생">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>
+            </button>
+            <button class="cbtn" id="nextBtn" aria-label="다음">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="16.5" y="5" width="2.5" height="14" rx="1.2"/>
+                    <polygon points="5,5 15,12 5,19"/>
+                </svg>
+            </button>
+            <div class="repeat-wrap">
+                <button class="cbtn" id="repeatBtn" aria-label="반복설정">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                </button>
+                <span class="rbadge" id="rbadge">∞</span>
+            </div>
+        </div>
+
+        <div class="status" id="status">과를 선택하고 재생하세요</div>
+
+        <!-- Settings -->
+        <button class="settings-bar" id="settingsBtn" aria-label="설정 열기">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span id="settingsSummary">한국어 · 여성 · 전체</span>
+        </button>
+    </div>
+</div>
+
+<!-- Settings Sheet -->
+<div class="overlay" id="overlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <h3>설정</h3>
+
+        <div class="set-group">
+            <div class="set-label">언어</div>
+            <div class="seg" id="langSeg">
+                <button class="seg-btn active" data-lang="ko">한국어</button>
+                <button class="seg-btn"        data-lang="en">English</button>
+            </div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-label">음성</div>
+            <div class="seg" id="genderSeg">
+                <button class="seg-btn active" data-gender="F">여성</button>
+                <button class="seg-btn"        data-gender="M">남성</button>
+            </div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-label">재생 구간</div>
+            <div class="seg" id="modeSeg">
+                <button class="seg-btn"        data-mode="v1">1절만</button>
+                <button class="seg-btn"        data-mode="v2">2절만</button>
+                <button class="seg-btn active" data-mode="all">전체</button>
+            </div>
+        </div>
+
+        <div class="set-label">반복 횟수</div>
+        <div class="repeat-grid">
+            <button class="ropt"     data-val="1">1회</button>
+            <button class="ropt"     data-val="2">2회</button>
+            <button class="ropt"     data-val="3">3회</button>
+            <button class="ropt"     data-val="5">5회</button>
+            <button class="ropt"     data-val="7">7회</button>
+            <button class="ropt"     data-val="10">10회</button>
+            <button class="ropt"     data-val="20">20회</button>
+            <button class="ropt inf sel" data-val="0">∞</button>
+        </div>
+        <button class="sheet-close" id="sheetClose">확인</button>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  SVG 아이콘
+// ═══════════════════════════════════════════════════════
+const ICON_PLAY  = `<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>`;
+const ICON_PAUSE = `<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="4" height="18" rx="1.5"/><rect x="15" y="3" width="4" height="18" rx="1.5"/></svg>`;
+
+// ═══════════════════════════════════════════════════════
+//  데이터
+// ═══════════════════════════════════════════════════════
+const WEEKS = [
+    {
+        label:     "1-부록1과",
+        theme:     { ko: "내 삶에 대한 자기소개서", en: "Orientation" },
+        titleBase: "B1A01_Orientation",
+        verses: [
+            {
+                base: "B1A01a_Acts_4-12",
+                ref:  { ko: "사도행전 4:12", en: "Acts 4:12" },
+                text: { ko: "다른 이로써는 구원을 받을 수 없나니 천하 사람 중에 구원을 받을 만한 다른 이름을 우리에게 주신 일이 없음이라 하였더라.",
+                        en: "And there is salvation in no one else, for there is no other name under heaven given among men by which we must be saved." }
+            },
+            {
+                base: "B1A01b_Rom_1-16-17",
+                ref:  { ko: "로마서 1:16-17", en: "Romans 1:16-17" },
+                text: { ko: "내가 복음을 부끄러워하지 아니하노니 이 복음은 모든 믿는 자에게 구원을 주시는 하나님의 능력이 됨이라 먼저는 유대인에게요 그리고 헬라인에게로다 복음에는 하나님의 의가 나타나서 믿음으로 믿음에 이르게 하나니 기록된 바 오직 의인은 믿음으로 말미암아 살리라 함과 같으니라.",
+                        en: "For I am not ashamed of the gospel, for it is the power of God for salvation to everyone who believes, to the Jew first and also to the Greek. For in it the righteousness of God is revealed from faith for faith, as it is written, “The righteous shall live by faith.”" }
+            }
+        ]
+    },
+    {
+        label:     "1-부록2과",
+        theme:     { ko: "나의 제자훈련 간증", en: "Testimony Sharing" },
+        titleBase: "B1A02_Testimony_Sharing",
+        verses: [
+            {
+                base: "B1A02a_John_14-6",
+                ref:  { ko: "요한복음 14:6", en: "John 14:6" },
+                text: { ko: "예수께서 이르시되 내가 곧 길이요 진리요 생명이니 나로 말미암지 않고는 아버지께로 올 자가 없느니라.",
+                        en: "Jesus said to him, “I am the way, and the truth, and the life. No one comes to the Father except through me.”" }
+            },
+            {
+                base: "B1A02b_Rom_5-8",
+                ref:  { ko: "로마서 5:8", en: "Romans 5:8" },
+                text: { ko: "우리가 아직 죄인 되었을 때에 그리스도께서 우리를 위하여 죽으심으로 하나님께서 우리에 대한 자기의 사랑을 확증하셨느니라.",
+                        en: "but God shows his love for us in that while we were still sinners, Christ died for us." }
+            }
+        ]
+    },
+    {
+        label:     "1-부록3과",
+        theme:     { ko: "훈련IBS 워크숍", en: "Inductive Bible Study Workshop" },
+        titleBase: "B1A03_Inductive_Bible_Study_Workshop",
+        verses: [
+            {
+                base: "B1A03a_Ps_119-11",
+                ref:  { ko: "시편 119:11", en: "Psalm 119:11" },
+                text: { ko: "내가 주께 범죄하지 아니하려 하여 주의 말씀을 내 마음에 두었나이다.",
+                        en: "I have stored up your word in my heart, that I might not sin against you." }
+            },
+            {
+                base: "B1A03b_Jas_4-8",
+                ref:  { ko: "야고보서 4:8", en: "James 4:8" },
+                text: { ko: "하나님을 가까이하라 그리하면 너희를 가까이하시리라 죄인들아 손을 깨끗이 하라 두 마음을 품은 자들아 마음을 성결하게 하라.",
+                        en: "Draw near to God, and he will draw near to you. Cleanse your hands, you sinners, and purify your hearts, you double-minded." }
+            }
+        ]
+    },
+    {
+        label:     "1-1과",
+        theme:     { ko: "목자의 심정", en: "The Heart of a Shepherd" },
+        titleBase: "B1L01_The_Heart_of_a_Shepherd",
+        verses: [
+            {
+                base: "B1L01a_Rom_8-1-4",
+                ref:  { ko: "로마서 8:1-4", en: "Romans 8:1-4" },
+                text: { ko: "그러므로 이제 그리스도 예수 안에 있는 자에게는 결코 정죄함이 없나니 이는 그리스도 예수 안에 있는 생명의 성령의 법이 죄와 사망의 법에서 너를 해방하였음이라 율법이 육신으로 말미암아 연약하여 할 수 없는 그것을 하나님은 하시나니 곧 죄로 말미암아 자기 아들을 죄 있는 육신의 모양으로 보내어 육신에 죄를 정하사 육신을 따르지 않고 그 영을 따라 행하는 우리에게 율법의 요구가 이루어지게 하려 하심이니라.",
+                        en: "There is therefore now no condemnation for those who are in Christ Jesus. For the law of the Spirit of life has set you free in Christ Jesus from the law of sin and death. For God has done what the law, weakened by the flesh, could not do. By sending his own Son in the likeness of sinful flesh and for sin, he condemned sin in the flesh, in order that the righteous requirement of the law might be fulfilled in us, who walk not according to the flesh but according to the Spirit." }
+            }
+        ]
+    },
+    {
+        label:     "1-2과",
+        theme:     { ko: "그리스도 안에서 얻은 하나님의 의", en: "God’s Righteousness Received in Christ" },
+        titleBase: "B1L02_Gods_Righteousness_Received_in_Christ",
+        verses: [
+            {
+                base: "B1L02a_Rom_8-5-11",
+                ref:  { ko: "로마서 8:5-11", en: "Romans 8:5-11" },
+                text: { ko: "육신을 따르는 자는 육신의 일을, 영을 따르는 자는 영의 일을 생각하나니 육신의 생각은 사망이요 영의 생각은 생명과 평안이니라 육신의 생각은 하나님과 원수가 되나니 이는 하나님의 법에 굴복하지 아니할 뿐 아니라 할 수도 없음이라 육신에 있는 자들은 하나님을 기쁘시게 할 수 없느니라 만일 너희 속에 하나님의 영이 거하시면 너희가 육신에 있지 아니하고 영에 있나니 누구든지 그리스도의 영이 없으면 그리스도의 사람이 아니라 또 그리스도께서 너희 안에 계시면 몸은 죄로 말미암아 죽은 것이나 영은 의로 말미암아 살아 있는 것이니라 예수를 죽은 자 가운데서 살리신 이의 영이 너희 안에 거하시면 그리스도 예수를 죽은 자 가운데서 살리신 이가 너희 안에 거하시는 그의 영으로 말미암아 너희 죽을 몸도 살리시리라.",
+                        en: "For those who live according to the flesh set their minds on the things of the flesh, but those who live according to the Spirit set their minds on the things of the Spirit. For to set the mind on the flesh is death, but to set the mind on the Spirit is life and peace. For the mind that is set on the flesh is hostile to God, for it does not submit to God’s law; indeed, it cannot. Those who are in the flesh cannot please God. You, however, are not in the flesh but in the Spirit, if in fact the Spirit of God dwells in you. Anyone who does not have the Spirit of Christ does not belong to him. But if Christ is in you, although the body is dead because of sin, the Spirit is life because of righteousness. If the Spirit of him who raised Jesus from the dead dwells in you, he who raised Christ Jesus from the dead will also give life to your mortal bodies through his Spirit who dwells in you." }
+            }
+        ]
+    },
+    {
+        label:     "1-3과",
+        theme:     { ko: "십자가 안에서 즐거워하라", en: "Rejoice in the Cross" },
+        titleBase: "B1L03_Rejoice_in_the_Cross",
+        verses: [
+            {
+                base: "B1L03a_Rom_8-12-17",
+                ref:  { ko: "로마서 8:12-17", en: "Romans 8:12-17" },
+                text: { ko: "그러므로 형제들아 우리가 빚진 자로되 육신에게 져서 육신대로 살 것이 아니니라 너희가 육신대로 살면 반드시 죽을 것이로되 영으로써 몸의 행실을 죽이면 살리니 무릇 하나님의 영으로 인도함을 받는 사람은 곧 하나님의 아들이라 너희는 다시 무서워하는 종의 영을 받지 아니하고 양자의 영을 받았으므로 우리가 아빠 아버지라고 부르짖느니라 성령이 친히 우리의 영과 더불어 우리가 하나님의 자녀인 것을 증언하시나니 자녀이면 또한 상속자 곧 하나님의 상속자요 그리스도와 함께 한 상속자니 우리가 그와 함께 영광을 받기 위하여 고난도 함께 받아야 할 것이니라.",
+                        en: "So then, brothers, we are debtors, not to the flesh, to live according to the flesh. For if you live according to the flesh you will die, but if by the Spirit you put to death the deeds of the body, you will live. For all who are led by the Spirit of God are sons of God. For you did not receive the spirit of slavery to fall back into fear, but you have received the Spirit of adoption as sons, by whom we cry, “Abba! Father!” The Spirit himself bears witness with our spirit that we are children of God, and if children, then heirs—heirs of God and fellow heirs with Christ, provided we suffer with him in order that we may also be glorified with him." }
+            }
+        ]
+    },
+    {
+        label:     "1-4과",
+        theme:     { ko: "의의 종으로 살라", en: "Live as a Slave of Righteousness" },
+        titleBase: "B1L04_Live_as_a_Slave_of_Righteousness",
+        verses: [
+            {
+                base: "B1L04a_Rom_8-18-25",
+                ref:  { ko: "로마서 8:18-25", en: "Romans 8:18-25" },
+                text: { ko: "생각하건대 현재의 고난은 장차 우리에게 나타날 영광과 비교할 수 없도다 피조물이 고대하는 바는 하나님의 아들들이 나타나는 것이니 피조물이 허무한 데 굴복하는 것은 자기 뜻이 아니요 오직 굴복하게 하시는 이로 말미암음이라 그 바라는 것은 피조물도 썩어짐의 종 노릇 한 데서 해방되어 하나님의 자녀들의 영광의 자유에 이르는 것이니라 피조물이 다 이제까지 함께 탄식하며 함께 고통을 겪고 있는 것을 우리가 아느니라 그뿐 아니라 또한 우리 곧 성령의 처음 익은 열매를 받은 우리까지도 속으로 탄식하여 양자 될 것 곧 우리 몸의 속량을 기다리느니라 우리가 소망으로 구원을 얻었으매 보이는 소망이 소망이 아니니 보는 것을 누가 바라리요 만일 우리가 보지 못하는 것을 바라면 참음으로 기다릴지니라.",
+                        en: "For I consider that the sufferings of this present time are not worth comparing with the glory that is to be revealed to us. For the creation waits with eager longing for the revealing of the sons of God. For the creation was subjected to futility, not willingly, but because of him who subjected it, in hope that the creation itself will be set free from its bondage to corruption and obtain the freedom of the glory of the children of God. For we know that the whole creation has been groaning together in the pains of childbirth until now. And not only the creation, but we ourselves, who have the firstfruits of the Spirit, groan inwardly as we wait eagerly for adoption as sons, the redemption of our bodies. For in this hope we were saved. Now hope that is seen is not hope. For who hopes for what he sees? But if we hope for what we do not see, we wait for it with patience." }
+            }
+        ]
+    },
+    {
+        label:     "1-5과",
+        theme:     { ko: "하나님의 자녀, 하나님의 상속자", en: "God’s Children, God’s Heirs" },
+        titleBase: "B1L05_Gods_Children_Gods_Heirs",
+        verses: [
+            {
+                base: "B1L05a_Rom_8-26-30",
+                ref:  { ko: "로마서 8:26-30", en: "Romans 8:26-30" },
+                text: { ko: "이와 같이 성령도 우리의 연약함을 도우시나니 우리는 마땅히 기도할 바를 알지 못하나 오직 성령이 말할 수 없는 탄식으로 우리를 위하여 친히 간구하시느니라 마음을 살피시는 이가 성령의 생각을 아시나니 이는 성령이 하나님의 뜻대로 성도를 위하여 간구하심이니라 우리가 알거니와 하나님을 사랑하는 자 곧 그의 뜻대로 부르심을 입은 자들에게는 모든 것이 합력하여 선을 이루느니라 하나님이 미리 아신 자들을 또한 그 아들의 형상을 본받게 하기 위하여 미리 정하셨으니 이는 그로 많은 형제 중에서 맏아들이 되게 하려 하심이니라 또 미리 정하신 그들을 또한 부르시고 부르신 그들을 또한 의롭다 하시고 의롭다 하신 그들을 또한 영화롭게 하셨느니라.",
+                        en: "Likewise the Spirit helps us in our weakness. For we do not know what to pray for as we ought, but the Spirit himself intercedes for us with groanings too deep for words. And he who searches hearts knows what is the mind of the Spirit, because the Spirit intercedes for the saints according to the will of God. And we know that for those who love God all things work together for good, for those who are called according to his purpose. For those whom he foreknew he also predestined to be conformed to the image of his Son, in order that he might be the firstborn among many brothers. And those whom he predestined he also called, and those whom he called he also justified, and those whom he justified he also glorified." }
+            }
+        ]
+    },
+    {
+        label:     "1-6과",
+        theme:     { ko: "끊을 수 없는 하나님의 사랑", en: "The Inseparable Love of God" },
+        titleBase: "B1L06_The_Inseparable_Love_of_God",
+        verses: [
+            {
+                base: "B1L06a_Rom_8-31-39",
+                ref:  { ko: "로마서 8:31-39", en: "Romans 8:31-39" },
+                text: { ko: "그런즉 이 일에 대하여 우리가 무슨 말 하리요 만일 하나님이 우리를 위하시면 누가 우리를 대적하리요 자기 아들을 아끼지 아니하시고 우리 모든 사람을 위하여 내주신 이가 어찌 그 아들과 함께 모든 것을 우리에게 주시지 아니하겠느냐 누가 능히 하나님께서 택하신 자들을 고발하리요 의롭다 하신 이는 하나님이시니 누가 정죄하리요 죽으실 뿐 아니라 다시 살아나신 이는 그리스도 예수시니 그는 하나님 우편에 계신 자요 우리를 위하여 간구하시는 자시니라 누가 우리를 그리스도의 사랑에서 끊으리요 환난이나 곤고나 박해나 기근이나 적신이나 위험이나 칼이랴 기록된 바 우리가 종일 주를 위하여 죽임을 당하게 되며 도살 당할 양 같이 여김을 받았나이다 함과 같으니라 그러나 이 모든 일에 우리를 사랑하시는 이로 말미암아 우리가 넉넉히 이기느니라 내가 확신하노니 사망이나 생명이나 천사들이나 권세자들이나 현재 일이나 장래 일이나 능력이나 높음이나 깊음이나 다른 어떤 피조물이라도 우리를 우리 주 그리스도 예수 안에 있는 하나님의 사랑에서 끊을 수 없으리라.",
+                        en: "What then shall we say to these things? If God is for us, who can be against us? He who did not spare his own Son but gave him up for us all, how will he not also with him graciously give us all things? Who shall bring any charge against God’s elect? It is God who justifies. Who is to condemn? Christ Jesus is the one who died—more than that, who was raised—who is at the right hand of God, who indeed is interceding for us. Who shall separate us from the love of Christ? Shall tribulation, or distress, or persecution, or famine, or nakedness, or danger, or sword? As it is written, “For your sake we are being killed all the day long; we are regarded as sheep to be slaughtered.” No, in all these things we are more than conquerors through him who loved us. For I am sure that neither death nor life, nor angels nor rulers, nor things present nor things to come, nor powers, nor height nor depth, nor anything else in all creation, will be able to separate us from the love of God in Christ Jesus our Lord." }
+            }
+        ]
+    },
+    {
+        label:     "2-1과",
+        theme:     { ko: "교회란 무엇인가1 - 신앙고백의 공동체", en: "What Is the Church? (1): A Confessional Community" },
+        titleBase: "B2L01_What_Is_the_Church_1_A_Confessional_Community",
+        verses: [
+            {
+                base: "B2L01a_Matt_16-18",
+                ref:  { ko: "마태복음 16:18", en: "Matthew 16:18" },
+                text: { ko: "또 내가 네게 이르노니 너는 베드로라 내가 이 반석 위에 내 교회를 세우리니 음부의 권세가 이기지 못하리라.",
+                        en: "And I tell you, you are Peter, and on this rock I will build my church, and the gates of hell shall not prevail against it." }
+            },
+            {
+                base: "B2L01b_1John_4-15",
+                ref:  { ko: "요한일서 4:15", en: "First John 4:15" },
+                text: { ko: "누구든지 예수를 하나님의 아들이라 시인하면 하나님이 그의 안에 거하시고 그도 하나님 안에 거하느니라.",
+                        en: "Whoever confesses that Jesus is the Son of God, God abides in him, and he in God." }
+            }
+        ]
+    },
+    {
+        label:     "2-2과",
+        theme:     { ko: "교회란 무엇인가2 - 영적 가족 공동체", en: "What Is the Church? (2): A Spiritual Family" },
+        titleBase: "B2L02_What_Is_the_Church_2_A_Spiritual_Family",
+        verses: [
+            {
+                base: "B2L02a_Eph_1-23",
+                ref:  { ko: "에베소서 1:23", en: "Ephesians 1:23" },
+                text: { ko: "교회는 그의 몸이니 만물 안에서 만물을 충만하게 하시는 이의 충만함이니라.",
+                        en: "which is his body, the fullness of him who fills all in all." }
+            },
+            {
+                base: "B2L02b_1Cor_12-13",
+                ref:  { ko: "고린도전서 12:13", en: "First Corinthians 12:13" },
+                text: { ko: "우리가 유대인이나 헬라인이나 종이나 자유인이나 다 한 성령으로 세례를 받아 한 몸이 되었고 또 다 한 성령을 마시게 하셨느니라.",
+                        en: "For in one Spirit we were all baptized into one body—Jews or Greeks, slaves or free—and all were made to drink of one Spirit." }
+            }
+        ]
+    },
+    {
+        label:     "2-3과",
+        theme:     { ko: "교회란 무엇인가3 - 은사 공동체", en: "What Is the Church? (3): A Gifted Community" },
+        titleBase: "B2L03_What_Is_the_Church_3_A_Gifted_Community",
+        verses: [
+            {
+                base: "B2L03a_Eph_4-11-12",
+                ref:  { ko: "에베소서 4:11-12", en: "Ephesians 4:11-12" },
+                text: { ko: "그가 어떤 사람은 사도로, 어떤 사람은 선지자로, 어떤 사람은 복음 전하는 자로, 어떤 사람은 목사와 교사로 삼으셨으니 이는 성도를 온전하게 하여 봉사의 일을 하게 하며 그리스도의 몸을 세우려 하심이라.",
+                        en: "And he gave the apostles, the prophets, the evangelists, the shepherds and teachers, to equip the saints for the work of ministry, for building up the body of Christ," }
+            },
+            {
+                base: "B2L03b_1Pet_4-10",
+                ref:  { ko: "베드로전서 4:10", en: "First Peter 4:10" },
+                text: { ko: "각각 은사를 받은 대로 하나님의 여러 가지 은혜를 맡은 선한 청지기 같이 서로 봉사하라.",
+                        en: "As each has received a gift, use it to serve one another, as good stewards of God’s varied grace:" }
+            }
+        ]
+    },
+    {
+        label:     "2-4과",
+        theme:     { ko: "교회는 왜 존재하는가1 - 예배", en: "Why Does the Church Exist? (1): Worship" },
+        titleBase: "B2L04_Why_Does_the_Church_Exist_1_Worship",
+        verses: [
+            {
+                base: "B2L04a_Eph_1-6",
+                ref:  { ko: "에베소서 1:6", en: "Ephesians 1:6" },
+                text: { ko: "이는 그가 사랑하시는 자 안에서 우리에게 거저 주시는 바 그의 은혜의 영광을 찬송하게 하려는 것이라.",
+                        en: "to the praise of his glorious grace, with which he has blessed us in the Beloved." }
+            },
+            {
+                base: "B2L04b_Ps_150-6",
+                ref:  { ko: "시편 150:6", en: "Psalm 150:6" },
+                text: { ko: "호흡이 있는 자마다 여호와를 찬양할지어다 할렐루야.",
+                        en: "Let everything that has breath praise the LORD! Praise the LORD!" }
+            }
+        ]
+    },
+    {
+        label:     "2-5과",
+        theme:     { ko: "교회는 왜 존재하는가2 - 훈련", en: "Why Does the Church Exist? (2): Discipleship Training" },
+        titleBase: "B2L05_Why_Does_the_Church_Exist_2_Discipleship_Training",
+        verses: [
+            {
+                base: "B2L05a_Matt_28-19-20",
+                ref:  { ko: "마태복음 28:19-20", en: "Matthew 28:19-20" },
+                text: { ko: "그러므로 너희는 가서 모든 민족을 제자로 삼아 아버지와 아들과 성령의 이름으로 세례를 베풀고 내가 너희에게 분부한 모든 것을 가르쳐 지키게 하라 볼지어다 내가 세상 끝날까지 너희와 항상 함께 있으리라 하시니라.",
+                        en: "Go therefore and make disciples of all nations, baptizing them in the name of the Father and of the Son and of the Holy Spirit, teaching them to observe all that I have commanded you. And behold, I am with you always, to the end of the age." }
+            },
+            {
+                base: "B2L05b_John_14-26",
+                ref:  { ko: "요한복음 14:26", en: "John 14:26" },
+                text: { ko: "보혜사 곧 아버지께서 내 이름으로 보내실 성령 그가 너희에게 모든 것을 가르치고 내가 너희에게 말한 모든 것을 생각나게 하리라.",
+                        en: "But the Helper, the Holy Spirit, whom the Father will send in my name, he will teach you all things and bring to your remembrance all that I have said to you." }
+            }
+        ]
+    },
+    {
+        label:     "2-6과",
+        theme:     { ko: "교회는 왜 존재하는가3 - 증거", en: "Why Does the Church Exist? (3): Witness" },
+        titleBase: "B2L06_Why_Does_the_Church_Exist_3_Witness",
+        verses: [
+            {
+                base: "B2L06a_Acts_1-8",
+                ref:  { ko: "사도행전 1:8", en: "Acts 1:8" },
+                text: { ko: "오직 성령이 너희에게 임하시면 너희가 권능을 받고 예루살렘과 온 유대와 사마리아와 땅 끝까지 이르러 내 증인이 되리라 하시니라.",
+                        en: "But you will receive power when the Holy Spirit has come upon you, and you will be my witnesses in Jerusalem and in all Judea and Samaria, and to the end of the earth." }
+            },
+            {
+                base: "B2L06b_1Tim_2-4",
+                ref:  { ko: "디모데전서 2:4", en: "First Timothy 2:4" },
+                text: { ko: "하나님은 모든 사람이 구원을 받으며 진리를 아는 데에 이르기를 원하시느니라.",
+                        en: "who desires all people to be saved and to come to the knowledge of the truth." }
+            }
+        ]
+    },
+    {
+        label:     "2-7과",
+        theme:     { ko: "하나님 나라와 평신도 사역", en: "The Kingdom of God and Lay Leadership" },
+        titleBase: "B2L07_The_Kingdom_of_God_and_Lay_Leadership",
+        verses: [
+            {
+                base: "B2L07a_1Cor_13-1-3",
+                ref:  { ko: "고린도전서 13:1-3", en: "First Corinthians 13:1-3" },
+                text: { ko: "내가 사람의 방언과 천사의 말을 할지라도 사랑이 없으면 소리 나는 구리와 울리는 꽹과리가 되고 내가 예언하는 능력이 있어 모든 비밀과 모든 지식을 알고 또 산을 옮길 만한 모든 믿음이 있을지라도 사랑이 없으면 내가 아무 것도 아니요 내가 내게 있는 모든 것으로 구제하고 또 내 몸을 불사르게 내줄지라도 사랑이 없으면 내게 아무 유익이 없느니라.",
+                        en: "If I speak in the tongues of men and of angels, but have not love, I am a noisy gong or a clanging cymbal. And if I have prophetic powers, and understand all mysteries and all knowledge, and if I have all faith, so as to remove mountains, but have not love, I am nothing. If I give away all I have, and if I deliver up my body to be burned, but have not love, I gain nothing." }
+            }
+        ]
+    },
+    {
+        label:     "2-8과",
+        theme:     { ko: "제자의 자격 1 : 전적 위탁과 순종 리더십", en: "Qualifications of a Disciple (1): Leadership of Total Surrender and Obedience" },
+        titleBase: "B2L08_Qualifications_of_a_Disciple_1_Leadership_of_Total_Surrender_and_Obedience",
+        verses: [
+            {
+                base: "B2L08a_1Cor_13-4-7",
+                ref:  { ko: "고린도전서 13:4-7", en: "First Corinthians 13:4-7" },
+                text: { ko: "사랑은 오래 참고 사랑은 온유하며 시기하지 아니하며 사랑은 자랑하지 아니하며 교만하지 아니하며 무례히 행하지 아니하며 자기의 유익을 구하지 아니하며 성내지 아니하며 악한 것을 생각하지 아니하며 불의를 기뻐하지 아니하며 진리와 함께 기뻐하고 모든 것을 참으며 모든 것을 믿으며 모든 것을 바라며 모든 것을 견디느니라.",
+                        en: "Love is patient and kind; love does not envy or boast; it is not arrogant or rude. It does not insist on its own way; it is not irritable or resentful; it does not rejoice at wrongdoing, but rejoices with the truth. Love bears all things, believes all things, hopes all things, endures all things." }
+            }
+        ]
+    },
+    {
+        label:     "2-9과",
+        theme:     { ko: "제자의 자격 2 : 종과 섬김 리더십", en: "Qualifications of a Disciple (2): Leadership of Servanthood and Service" },
+        titleBase: "B2L09_Qualifications_of_a_Disciple_2_Leadership_of_Servanthood_and_Service",
+        verses: [
+            {
+                base: "B2L09a_1Cor_13-8-10",
+                ref:  { ko: "고린도전서 13:8-10", en: "First Corinthians 13:8-10" },
+                text: { ko: "사랑은 언제까지나 떨어지지 아니하되 예언도 폐하고 방언도 그치고 지식도 폐하리라 우리는 부분적으로 알고 부분적으로 예언하니 온전한 것이 올 때에는 부분적으로 하던 것이 폐하리라.",
+                        en: "Love never ends. As for prophecies, they will pass away; as for tongues, they will cease; as for knowledge, it will pass away. For we know in part and we prophesy in part, but when the perfect comes, the partial will pass away." }
+            }
+        ]
+    },
+    {
+        label:     "2-10과",
+        theme:     { ko: "제자의 자격 3 : 증인과 나눔 리더십", en: "Qualifications of a Disciple (3): Leadership of Witness and Sharing" },
+        titleBase: "B2L10_Qualifications_of_a_Disciple_3_Leadership_of_Witness_and_Sharing",
+        verses: [
+            {
+                base: "B2L10a_1Cor_13-11-13",
+                ref:  { ko: "고린도전서 13:11-13", en: "First Corinthians 13:11-13" },
+                text: { ko: "내가 어렸을 때에는 말하는 것이 어린 아이와 같고 깨닫는 것이 어린 아이와 같고 생각하는 것이 어린 아이와 같다가 장성한 사람이 되어서는 어린 아이의 일을 버렸노라 우리가 지금은 거울로 보는 것 같이 희미하나 그 때에는 얼굴과 얼굴을 대하여 볼 것이요 지금은 내가 부분적으로 아나 그 때에는 주께서 나를 아신 것 같이 내가 온전히 알리라 그런즉 믿음, 소망, 사랑, 이 세 가지는 항상 있을 것인데 그 중의 제일은 사랑이라.",
+                        en: "When I was a child, I spoke like a child, I thought like a child, I reasoned like a child. When I became a man, I gave up childish ways. For now we see in a mirror dimly, but then face to face. Now I know in part; then I shall know fully, even as I have been fully known. So now faith, hope, and love abide, these three; but the greatest of these is love." }
+            }
+        ]
+    },
+    {
+        label:     "3-1과",
+        theme:     { ko: "소그룹의 힘", en: "The Power of Small Groups" },
+        titleBase: "B3L01_The_Power_of_Small_Groups",
+        verses: [
+            {
+                base: "B3L01a_Heb_10-24-25",
+                ref:  { ko: "히브리서 10:24-25", en: "Hebrews 10:24-25" },
+                text: { ko: "서로 돌아보아 사랑과 선행을 격려하며 모이기를 폐하는 어떤 사람들의 습관과 같이 하지 말고 오직 권하여 그 날이 가까움을 볼수록 더욱 그리하자.",
+                        en: "And let us consider how to stir up one another to love and good works, not neglecting to meet together, as is the habit of some, but encouraging one another, and all the more as you see the Day drawing near." }
+            },
+            {
+                base: "B3L01b_Gal_6-2",
+                ref:  { ko: "갈라디아서 6:2", en: "Galatians 6:2" },
+                text: { ko: "너희가 짐을 서로 지라 그리하여 그리스도의 법을 성취하라.",
+                        en: "Bear one another’s burdens, and so fulfill the law of Christ." }
+            }
+        ]
+    },
+    {
+        label:     "3-2과",
+        theme:     { ko: "소그룹을 어떻게 인도할 것인가", en: "How to Lead a Small Group" },
+        titleBase: "B3L02_How_to_Lead_a_Small_Group",
+        verses: [
+            {
+                base: "B3L02a_John_6-35",
+                ref:  { ko: "요한복음 6:35", en: "John 6:35" },
+                text: { ko: "예수께서 이르시되 나는 생명의 떡이니 내게 오는 자는 결코 주리지 아니할 터이요 나를 믿는 자는 영원히 목마르지 아니하리라.",
+                        en: "Jesus said to them, “I am the bread of life; whoever comes to me shall not hunger, and whoever believes in me shall never thirst.”" }
+            },
+            {
+                base: "B3L02b_Acts_2-32",
+                ref:  { ko: "사도행전 2:32", en: "Acts 2:32" },
+                text: { ko: "이 예수를 하나님이 살리신지라 우리가 다 이 일에 증인이로다.",
+                        en: "This Jesus God raised up, and of that we all are witnesses." }
+            }
+        ]
+    },
+    {
+        label:     "3-3과",
+        theme:     { ko: "소그룹 교재 준비의 실제", en: "Practical Preparation of Small Group Materials" },
+        titleBase: "B3L03_Practical_Preparation_of_Small_Group_Materials",
+        verses: [
+            {
+                base: "B3L03a_1Cor_4-15",
+                ref:  { ko: "고린도전서 4:15", en: "First Corinthians 4:15" },
+                text: { ko: "그리스도 안에서 일만 스승이 있으되 아버지는 많지 아니하니 그리스도 예수 안에서 내가 복음으로써 너희를 낳았음이라.",
+                        en: "For though you have countless guides in Christ, you do not have many fathers. For I became your father in Christ Jesus through the gospel." }
+            },
+            {
+                base: "B3L03b_Phil_1-11",
+                ref:  { ko: "빌립보서 1:11", en: "Philippians 1:11" },
+                text: { ko: "예수 그리스도로 말미암아 의의 열매가 가득하여 하나님의 영광과 찬송이 되기를 원하노라.",
+                        en: "filled with the fruit of righteousness that comes through Jesus Christ, to the glory and praise of God." }
+            }
+        ]
+    },
+    {
+        label:     "3-4과",
+        theme:     { ko: "소그룹 현장 참관", en: "Observation of a Small Group in Action" },
+        titleBase: "B3L04_Observation_of_a_Small_Group_in_Action",
+        verses: [
+            {
+                base: "B3L04a_Ps_133-1",
+                ref:  { ko: "시편 133:1", en: "Psalm 133:1" },
+                text: { ko: "보라 형제가 연합하여 동거함이 어찌 그리 선하고 아름다운고.",
+                        en: "Behold, how good and pleasant it is when brothers dwell in unity!" }
+            },
+            {
+                base: "B3L04b_1Tim_4-13",
+                ref:  { ko: "디모데전서 4:13", en: "First Timothy 4:13" },
+                text: { ko: "내가 이를 때까지 읽는 것과 권하는 것과 가르치는 것에 전념하라.",
+                        en: "Until I come, devote yourself to the public reading of Scripture, to exhortation, to teaching." }
+            }
+        ]
+    },
+    {
+        label:     "3-5과",
+        theme:     { ko: "소그룹 인도 실습과 자기 점검", en: "Small Group Leadership Practice and Self-Evaluation" },
+        titleBase: "B3L05_Small_Group_Leadership_Practice_and_Self_Evaluation",
+        verses: [
+            {
+                base: "B3L05a_2Tim_2-3",
+                ref:  { ko: "디모데후서 2:3", en: "Second Timothy 2:3" },
+                text: { ko: "너는 그리스도 예수의 좋은 병사로 나와 함께 고난을 받으라.",
+                        en: "Share in suffering as a good soldier of Christ Jesus." }
+            },
+            {
+                base: "B3L05b_Acts_19-20",
+                ref:  { ko: "사도행전 19:20", en: "Acts 19:20" },
+                text: { ko: "이와 같이 주의 말씀이 힘이 있어 흥왕하여 세력을 얻으니라.",
+                        en: "So the word of the Lord continued to increase and prevail mightily." }
+            }
+        ]
+    },
+    {
+        label:     "3-6과",
+        theme:     { ko: "부름 받은 곳에서 사역자로", en: "Serving as a Leader Where You Are Called" },
+        titleBase: "B3L06_Serving_as_a_Leader_Where_You_Are_Called",
+        verses: [
+            {
+                base: "B3L06a_Acts_20-24",
+                ref:  { ko: "사도행전 20:24", en: "Acts 20:24" },
+                text: { ko: "내가 달려갈 길과 주 예수께 받은 사명 곧 하나님의 은혜의 복음을 증언하는 일을 마치려 함에는 나의 생명조차 조금도 귀한 것으로 여기지 아니하노라.",
+                        en: "But I do not account my life of any value nor as precious to myself, if only I may finish my course and the ministry that I received from the Lord Jesus, to testify to the gospel of the grace of God." }
+            },
+            {
+                base: "B3L06b_2Tim_4-2",
+                ref:  { ko: "디모데후서 4:2", en: "Second Timothy 4:2" },
+                text: { ko: "너는 말씀을 전파하라 때를 얻든지 못 얻든지 항상 힘쓰라 범사에 오래 참음과 가르침으로 경책하며 경계하며 권하라.",
+                        en: "preach the word; be ready in season and out of season; reprove, rebuke, and exhort, with complete patience and teaching." }
+            }
+        ]
+    },
+    {
+        label:     "3-특별1과",
+        theme:     { ko: "사역훈련과 아웃리치(1)", en: "Ministry and Outreach (1)" },
+        titleBase: "B3S01_Ministry_and_Outreach_1",
+        verses: [
+            {
+                base: "B3S01a_1Cor_15-58",
+                ref:  { ko: "고린도전서 15:58", en: "First Corinthians 15:58" },
+                text: { ko: "그러므로 내 사랑하는 형제들아 견실하며 흔들리지 말고 항상 주의 일에 더욱 힘쓰는 자들이 되라 이는 너희 수고가 주 안에서 헛되지 않은 줄 앎이라.",
+                        en: "Therefore, my beloved brothers, be steadfast, immovable, always abounding in the work of the Lord, knowing that in the Lord your labor is not in vain." }
+            },
+            {
+                base: "B3S01b_1Pet_5-6",
+                ref:  { ko: "베드로전서 5:6", en: "First Peter 5:6" },
+                text: { ko: "그러므로 하나님의 능하신 손 아래에서 겸손하라 때가 되면 너희를 높이시리라.",
+                        en: "Humble yourselves, therefore, under the mighty hand of God so that at the proper time he may exalt you," }
+            }
+        ]
+    },
+    {
+        label:     "3-특별2과",
+        theme:     { ko: "사역훈련과 아웃리치(2)", en: "Ministry and Outreach (2)" },
+        titleBase: "B3S02_Ministry_and_Outreach_2",
+        verses: [
+            {
+                base: "B3S02a_Rom_8-32",
+                ref:  { ko: "로마서 8:32", en: "Romans 8:32" },
+                text: { ko: "자기 아들을 아끼지 아니하시고 우리 모든 사람을 위하여 내주신 이가 어찌 그 아들과 함께 모든 것을 우리에게 주시지 아니하겠느냐.",
+                        en: "He who did not spare his own Son but gave him up for us all, how will he not also with him graciously give us all things?" }
+            },
+            {
+                base: "B3S02b_Matt_18-20",
+                ref:  { ko: "마태복음 18:20", en: "Matthew 18:20" },
+                text: { ko: "두세 사람이 내 이름으로 모인 곳에는 나도 그들 중에 있느니라.",
+                        en: "For where two or three are gathered in my name, there am I among them." }
+            }
+        ]
+    },
+    {
+        label:     "3-특별3과",
+        theme:     { ko: "사역훈련과 아웃리치(3)", en: "Ministry and Outreach (3)" },
+        titleBase: "B3S03_Ministry_and_Outreach_3",
+        verses: [
+            {
+                base: "B3S03a_Mark_6-34",
+                ref:  { ko: "마가복음 6:34", en: "Mark 6:34" },
+                text: { ko: "예수께서 나오사 큰 무리를 보시고 그 목자 없는 양 같음으로 인하여 불쌍히 여기사 이에 여러 가지로 가르치시더라.",
+                        en: "When he went ashore he saw a great crowd, and he had compassion on them, because they were like sheep without a shepherd. And he began to teach them many things." }
+            },
+            {
+                base: "B3S03b_Jas_2-16",
+                ref:  { ko: "야고보서 2:16", en: "James 2:16" },
+                text: { ko: "너희 중에 누구든지 그에게 이르되 평안히 가라, 덥게 하라, 배부르게 하라 하며 그 몸에 쓸 것을 주지 아니하면 무슨 유익이 있으리요.",
+                        en: "and one of you says to them, “Go in peace, be warmed and filled,” without giving them the things needed for the body, what good is that?" }
+            }
+        ]
+    },
+    {
+        label:     "3-특별4과",
+        theme:     { ko: "사역훈련과 아웃리치(4)", en: "Ministry and Outreach (4)" },
+        titleBase: "B3S04_Ministry_and_Outreach_4",
+        verses: [
+            {
+                base: "B3S04a_Phil_2-14",
+                ref:  { ko: "빌립보서 2:14", en: "Philippians 2:14" },
+                text: { ko: "모든 일을 원망과 시비가 없이 하라.",
+                        en: "Do all things without grumbling or disputing," }
+            },
+            {
+                base: "B3S04b_1Tim_4-15",
+                ref:  { ko: "디모데전서 4:15", en: "First Timothy 4:15" },
+                text: { ko: "이 모든 일에 전심 전력하여 너의 성숙함을 모든 사람에게 나타나게 하라.",
+                        en: "Practice these things, immerse yourself in them, so that all may see your progress." }
+            }
+        ]
+    }
+];
+
+// ═══════════════════════════════════════════════════════
+//  오디오 경로 헬퍼
+//  Audio/{베이스}_{KO|EN}_{F|M}.mp3
+//    제목 → Audio/T01_Christ_the_Center_KO_F.mp3
+//    구절 → Audio/01_Gal_2-20_KO_F.mp3
+// ═══════════════════════════════════════════════════════
+function src(weekIdx, track) {  // track: 1=제목, 2=1절, 3=2절
+    const w = WEEKS[weekIdx];
+    const base = track === 1 ? w.titleBase : w.verses[track-2].base;
+    return `Audio/${base}_${lang.toUpperCase()}_${gender}.mp3`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  상태
+// ═══════════════════════════════════════════════════════
+let week        = 0;          // 현재 과 인덱스
+let lang        = 'ko';       // 'ko' | 'en'  — 음성 + 화면 텍스트
+let gender      = 'F';        // 'F' | 'M'    — 음성 성별
+let mode        = 'all';      // 'v1' | 'v2' | 'all'  (기본: 전체)
+let repeatTotal = 0;          // 반복 횟수 (0 = 무한)
+let repeatNow   = 0;          // 현재 반복 회차
+let speedIdx    = 0;
+const SPEEDS    = [1, 1.25, 1.5, 2];
+
+let audio       = null;       // 현재 Audio 객체
+let isPlaying   = false;
+let queue       = [];         // 재생할 트랙 번호 배열 (2|3)
+let qIdx        = 0;          // 큐 내 현재 인덱스
+
+// ═══════════════════════════════════════════════════════
+//  DOM
+// ═══════════════════════════════════════════════════════
+const $weekTabs  = document.getElementById('weekTabs');
+const $content   = document.getElementById('content');
+const $playBtn   = document.getElementById('playBtn');
+const $prevBtn   = document.getElementById('prevBtn');
+const $nextBtn   = document.getElementById('nextBtn');
+const $speedBtn  = document.getElementById('speedBtn');
+const $repeatBtn = document.getElementById('repeatBtn');
+const $rbadge    = document.getElementById('rbadge');
+const $status    = document.getElementById('status');
+const $progTrack = document.getElementById('progressTrack');
+const $progFill  = document.getElementById('progressFill');
+const $curTime   = document.getElementById('curTime');
+const $totTime   = document.getElementById('totTime');
+const $langSeg   = document.getElementById('langSeg');
+const $genderSeg = document.getElementById('genderSeg');
+const $modeSeg   = document.getElementById('modeSeg');
+const $settingsBtn     = document.getElementById('settingsBtn');
+const $settingsSummary = document.getElementById('settingsSummary');
+const $overlay   = document.getElementById('overlay');
+const $sheetClose = document.getElementById('sheetClose');
+
+// ═══════════════════════════════════════════════════════
+//  유틸
+// ═══════════════════════════════════════════════════════
+function fmt(s) {
+    if (!isFinite(s) || s < 0) return '0:00';
+    const m = Math.floor(s/60), sec = Math.floor(s%60);
+    return `${m}:${sec<10?'0':''}${sec}`;
+}
+function vCount(w = week) { return WEEKS[w].verses.length; }
+function wLabel() {
+    if (vCount() < 2) return '1절';
+    return mode === 'v1' ? '1절' : mode === 'v2' ? '2절' : '1절+2절';
+}
+function buildQueue() {
+    if (vCount() < 2)   return [1, 2];      // 구절이 하나뿐인 과
+    if (mode === 'v1')  return [1, 2];
+    if (mode === 'v2')  return [1, 3];
+    return [1, 2, 3];
+}
+// 구절이 하나뿐인 과에서는 '2절만' 을 고를 수 없게 한다
+function syncModeAvail() {
+    const only1 = vCount() < 2;
+    const btn2  = $modeSeg.querySelector('[data-mode="v2"]');
+    if (btn2) btn2.disabled = only1;
+    if (only1 && mode === 'v2') setMode('all');
+}
+
+// ═══════════════════════════════════════════════════════
+//  렌더링
+// ═══════════════════════════════════════════════════════
+function renderTabs() {
+    $weekTabs.innerHTML = '';
+    WEEKS.forEach((w, i) => {
+        const btn = document.createElement('button');
+        btn.className = `wtab${i===week?' active':''}`;
+        btn.dataset.w = i;
+        btn.textContent = w.label;
+        $weekTabs.appendChild(btn);
+    });
+}
+
+function renderContent() {
+    const w = WEEKS[week];
+    $content.innerHTML = `
+        <div class="theme-row">
+            <div class="theme-badge">${w.label} · ${w.theme[lang]}</div>
+        </div>
+        ${w.verses.map((v,i) => `
+            <div class="verse-card" id="card-${i}">
+                <div class="card-header">
+                    <div class="card-meta">
+                        <span class="verse-ref">${v.ref[lang]}</span>
+                    </div>
+                    <button class="card-play-btn" id="cpbtn-${i}" aria-label="${i+1}절 재생"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg></button>
+                </div>
+                <div class="verse-text${lang === 'en' ? ' en' : ''}" lang="${lang}">${v.text[lang]}</div>
+            </div>
+        `).join('')}
+    `;
+
+    // 카드 재생 버튼
+    w.verses.forEach((_,i) => {
+        document.getElementById(`cpbtn-${i}`).onclick = () => {
+            setMode(i===0 ? 'v1' : 'v2');
+            startPlay();
+        };
+    });
+}
+
+function renderTabActive() {
+    document.querySelectorAll('.wtab').forEach((b,i) => {
+        b.classList.toggle('active', i===week);
+    });
+}
+
+function setCardPlaying(verseIdx) {
+    // verseIdx: 0-based (null = none)
+    for (let i=0; i<vCount(); i++) {
+        const card = document.getElementById(`card-${i}`);
+        const btn  = document.getElementById(`cpbtn-${i}`);
+        if (!card) continue;
+        const active = (i === verseIdx) && isPlaying;
+        card.classList.toggle('playing', active);
+        if (btn) btn.innerHTML = active
+            ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="4" height="18" rx="1.5"/><rect x="15" y="3" width="4" height="18" rx="1.5"/></svg>`
+            : `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>`;
+    }
+}
+
+function clearCards() { setCardPlaying(null); }
+
+// ═══════════════════════════════════════════════════════
+//  언어 / 음성
+// ═══════════════════════════════════════════════════════
+const PREF_KEY = 'srcc-dt3-pref';
+
+function savePref() {
+    try {
+        localStorage.setItem(PREF_KEY, JSON.stringify({ lang, gender, mode, repeat: repeatTotal }));
+    } catch {}
+}
+function loadPref() {
+    try {
+        const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+        if (p.lang === 'ko' || p.lang === 'en')            lang   = p.lang;
+        if (p.gender === 'F' || p.gender === 'M')          gender = p.gender;
+        if (['v1','v2','all'].includes(p.mode))            mode   = p.mode;
+        if (Number.isInteger(p.repeat) && p.repeat >= 0)   repeatTotal = p.repeat;
+    } catch {}
+}
+
+// 설정 바에 현재 선택을 요약해 보여준다
+function updateSummary() {
+    if (!$settingsSummary) return;
+    const L = lang === 'ko' ? '한국어' : 'English';
+    const G = gender === 'F' ? '여성' : '남성';
+    const M = mode === 'v1' ? '1절만' : mode === 'v2' ? '2절만' : '전체';
+    $settingsSummary.textContent = `${L} · ${G} · ${M}`;
+}
+
+function openSettings()  { $overlay.classList.add('show'); }
+function closeSettings() { $overlay.classList.remove('show'); }
+
+// 선택 변경 시: 화면 텍스트를 다시 그리고, 재생 중이면 새 음성으로 재시작
+function applyVoiceChange() {
+    const wasPlaying = isPlaying;
+    if (wasPlaying) stopAudio();
+    renderContent();
+    if (wasPlaying) startPlay();
+    else setStatus('', `${WEEKS[week].label} · ${WEEKS[week].theme[lang]}`);
+    savePref();
+    updateSummary();
+    prefetchWeek(week);
+}
+
+function setLang(l) {
+    if (l === lang) return;
+    lang = l;
+    document.documentElement.lang = l;
+    $langSeg.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === l));
+    applyVoiceChange();
+}
+
+function setGender(g) {
+    if (g === gender) return;
+    gender = g;
+    $genderSeg.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.gender === g));
+    applyVoiceChange();
+}
+
+// ═══════════════════════════════════════════════════════
+//  모드
+// ═══════════════════════════════════════════════════════
+function setMode(m) {
+    mode = m;
+    $modeSeg.querySelectorAll('.seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === m);
+    });
+    updateSummary();
+    savePref();
+}
+
+// 반복 횟수 (0 = 무한)
+function setRepeat(v) {
+    repeatTotal = v;
+    document.querySelectorAll('.ropt').forEach(b => {
+        b.classList.toggle('sel', parseInt(b.dataset.val) === v);
+    });
+    $rbadge.textContent = v === 0 ? '∞' : v;
+    savePref();
+}
+
+// ═══════════════════════════════════════════════════════
+//  오디오 엔진
+// ═══════════════════════════════════════════════════════
+function stopAudio() {
+    if (audio) {
+        audio.onended = null;
+        audio.ontimeupdate = null;
+        audio.onloadedmetadata = null;
+        audio.onerror = null;
+        audio.pause();
+        audio.src = '';
+    }
+    audio = null;
+    isPlaying = false;
+    $playBtn.innerHTML = ICON_PLAY;
+    setMediaState('none');
+    $progFill.style.width = '0%';
+    $curTime.textContent  = '0:00';
+    $totTime.textContent  = '0:00';
+    clearCards();
+}
+
+function loadPlay(fileSrc, onEnd, onErr) {
+    if (audio) { audio.onended=null; audio.onerror=null; audio.pause(); audio.src=''; }
+    audio = new Audio();
+    audio.playbackRate = SPEEDS[speedIdx];
+
+    audio.onloadedmetadata = () => { $totTime.textContent = fmt(audio.duration); };
+    audio.ontimeupdate = () => {
+        const pct = (audio.currentTime / audio.duration) * 100 || 0;
+        $progFill.style.width = pct + '%';
+        $curTime.textContent  = fmt(audio.currentTime);
+    };
+    audio.onended = onEnd;
+    audio.onerror = onErr;
+    audio.src = fileSrc;
+    return audio.play().catch(onErr);
+}
+
+// 제목 재생 (독립적, 반복 없음)
+// 메인 재생: 큐 기반 반복
+function startPlay() {
+    stopAudio();
+    queue      = buildQueue();
+    qIdx       = 0;
+    repeatNow  = 1;
+    isPlaying  = true;
+    $playBtn.innerHTML = ICON_PAUSE;
+    playNext();
+}
+
+function playNext() {
+    if (qIdx >= queue.length) {
+        // 한 사이클 완료 → 반복 처리
+        if (repeatTotal !== 0 && repeatNow >= repeatTotal) {
+            // 완료
+            isPlaying = false;
+            $playBtn.innerHTML = ICON_PLAY;
+            setStatus('', `✓ 반복 완료 (${repeatTotal}회)`);
+            clearCards();
+            return;
+        }
+        repeatNow++;
+        qIdx = 0;
+        playNext();
+        return;
+    }
+
+    const track = queue[qIdx];      // 1=제목, 2=1절, 3=2절
+
+    if (track === 1) {
+        // 제목: 카드 하이라이트 없이 재생
+        clearCards();
+        setStatus('playing', `${WEEKS[week].label} 제목 재생 중`);
+    } else {
+        const vi = track - 2;       // 카드 인덱스 (0 또는 1)
+        setCardPlaying(vi);
+        updateStatus();
+        const card = document.getElementById(`card-${vi}`);
+        if (card) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+
+    setMediaMetadata(track);
+    setMediaState('playing');
+
+    loadPlay(
+        src(week, track),
+        () => { qIdx++; playNext(); },
+        () => {
+            isPlaying = false;
+            $playBtn.innerHTML = ICON_PLAY;
+            setMediaState('paused');
+            setStatus('error', navigator.onLine
+                ? `음성 파일을 재생할 수 없습니다: ${src(week, track)}`
+                : '오프라인 상태입니다 — 아직 저장되지 않은 구절입니다');
+        }
+    );
+}
+
+function togglePlay() {
+    if (isPlaying) {
+        if (audio) audio.pause();
+        isPlaying = false;
+        $playBtn.innerHTML = ICON_PLAY;
+        setMediaState('paused');
+        setStatus('', '일시정지됨');
+    } else if (audio && audio.src && !audio.ended) {
+        audio.play().then(() => {
+            isPlaying = true;
+            $playBtn.innerHTML = ICON_PAUSE;
+            setMediaState('playing');
+            updateStatus();
+        }).catch(() => startPlay());
+    } else {
+        startPlay();
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  잠금화면 / 알림창 재생 정보 (MediaSession)
+// ═══════════════════════════════════════════════════════
+const hasMediaSession = 'mediaSession' in navigator;
+
+function setMediaMetadata(track) {
+    if (!hasMediaSession) return;
+    const w = WEEKS[week];
+    const heading = track === 1 ? w.theme[lang] : w.verses[track-2].ref[lang];
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title:  heading,
+        artist: `${w.label} · ${w.theme[lang]}`,
+        album:  lang === 'ko' ? '사역반 성경암송' : 'Ministry Memory Verses',
+        artwork: [
+            { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+    });
+}
+
+function setMediaState(state) {
+    if (hasMediaSession) navigator.mediaSession.playbackState = state;
+}
+
+function setupMediaSession() {
+    if (!hasMediaSession) return;
+    const on = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
+    on('play',  () => { if (!isPlaying) togglePlay(); });
+    on('pause', () => { if (isPlaying)  togglePlay(); });
+    on('previoustrack', () => { if (week > 0) selectWeek(week - 1); });
+    on('nexttrack',     () => { if (week < WEEKS.length - 1) selectWeek(week + 1); });
+    on('stop', stopAudio);
+}
+
+// ═══════════════════════════════════════════════════════
+//  상태 텍스트
+// ═══════════════════════════════════════════════════════
+function updateStatus() {
+    const rep = repeatTotal === 0 ? `∞ 무한반복` : `${repeatNow}/${repeatTotal}회`;
+    setStatus('playing', `${WEEKS[week].label} ${wLabel()} 재생 중 — ${rep}`);
+}
+function setStatus(cls, msg) {
+    $status.className = `status${cls ? ' '+cls : ''}`;
+    $status.innerHTML = cls === 'playing'
+        ? `<span class="wave-icon"><span></span><span></span><span></span><span></span></span>${msg}`
+        : msg;
+}
+
+// ═══════════════════════════════════════════════════════
+//  오프라인 대비: 선택한 과의 음성을 미리 받아 둔다
+//  (서비스워커가 가로채 저장하므로 여기서는 요청만 보낸다)
+// ═══════════════════════════════════════════════════════
+function prefetchWeek(w) {
+    if (!navigator.serviceWorker?.controller) return;   // 아직 설치 전
+    if (!navigator.onLine) return;
+    if (navigator.connection?.saveData) return;         // 데이터 절약 모드면 생략
+    for (const track of (WEEKS[w].verses.length >= 2 ? [1, 2, 3] : [1, 2])) {
+        fetch(src(w, track), { credentials: 'omit' }).catch(() => {});
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  과 선택
+// ═══════════════════════════════════════════════════════
+function selectWeek(w) {
+    stopAudio();
+    week = w;
+    syncModeAvail();
+    renderTabActive();
+    renderContent();
+    // 탭 스크롤
+    const tab = $weekTabs.children[w];
+    if (tab) tab.scrollIntoView({ inline:'center', behavior:'smooth' });
+    setStatus('', `${WEEKS[week].label} · ${WEEKS[week].theme[lang]}`);
+    prefetchWeek(week);
+}
+
+// ═══════════════════════════════════════════════════════
+//  이벤트
+// ═══════════════════════════════════════════════════════
+function setupEvents() {
+    // 과 탭
+    $weekTabs.addEventListener('click', e => {
+        if (e.target.classList.contains('wtab'))
+            selectWeek(parseInt(e.target.dataset.w));
+    });
+
+    // 언어 선택
+    $langSeg.addEventListener('click', e => {
+        const b = e.target.closest('.seg-btn');
+        if (b) setLang(b.dataset.lang);
+    });
+
+    // 음성 성별 선택
+    $genderSeg.addEventListener('click', e => {
+        const b = e.target.closest('.seg-btn');
+        if (b) setGender(b.dataset.gender);
+    });
+
+    // 재생 / 일시정지
+    $playBtn.addEventListener('click', togglePlay);
+
+    // 이전 / 다음
+    $prevBtn.addEventListener('click', () => {
+        if (week > 0) selectWeek(week - 1);
+    });
+    $nextBtn.addEventListener('click', () => {
+        if (week < WEEKS.length - 1) selectWeek(week + 1);
+    });
+
+    // 재생 속도
+    $speedBtn.addEventListener('click', () => {
+        speedIdx = (speedIdx + 1) % SPEEDS.length;
+        if (audio) audio.playbackRate = SPEEDS[speedIdx];
+        $speedBtn.textContent = SPEEDS[speedIdx] === 1 ? '1x' : SPEEDS[speedIdx] + 'x';
+    });
+
+    // 설정 시트 열기 (하단 설정 바 · 반복 버튼 모두 같은 시트)
+    $settingsBtn.addEventListener('click', openSettings);
+    $repeatBtn.addEventListener('click', openSettings);
+    $overlay.addEventListener('click', e => { if (e.target === $overlay) closeSettings(); });
+    $sheetClose.addEventListener('click', closeSettings);
+
+    // 반복 횟수
+    document.querySelectorAll('.ropt').forEach(btn => {
+        btn.addEventListener('click', () => setRepeat(parseInt(btn.dataset.val)));
+    });
+
+    // 재생 구간
+    $modeSeg.addEventListener('click', e => {
+        const b = e.target.closest('.seg-btn');
+        if (!b || b.dataset.mode === mode) return;
+        setMode(b.dataset.mode);
+        if (isPlaying) startPlay();   // 재생 중이면 즉시 새 구간으로 재시작
+    });
+
+    // 프로그레스 클릭
+    $progTrack.addEventListener('click', e => {
+        if (!audio || !audio.duration) return;
+        const r = $progTrack.getBoundingClientRect();
+        audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+//  초기화
+// ═══════════════════════════════════════════════════════
+// 홈 화면 설치·오프라인 재생을 담당하는 서비스워커
+function registerSW() {
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+function init() {
+    registerSW();
+    setupMediaSession();
+    loadPref();
+    document.documentElement.lang = lang;
+    $langSeg.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+    $genderSeg.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.gender === gender));
+    setMode(mode);
+    setRepeat(repeatTotal);
+    updateSummary();
+    renderTabs();
+    selectWeek(0);
+    setupEvents();
+}
+init();
+</script>
+</body>
+</html>
