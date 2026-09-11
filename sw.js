@@ -9,9 +9,9 @@
  *  음성 캐시(AUDIO)는 파일명이 바뀌지 않는 한 그대로 유지합니다.
  */
 
-const SHELL_VER = 'v4';   // 한글 구절·제목 28개 재녹음
+const SHELL_VER = 'v5';   // 흥왕 발음 교정
 const SHELL = `mv3-shell-${SHELL_VER}`;
-const AUDIO = 'mv3-audio-v4';
+const AUDIO = 'mv3-audio-v5';
 const FONT  = 'mv3-font-v1';
 
 const SHELL_FILES = [
