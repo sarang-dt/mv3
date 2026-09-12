@@ -9,9 +9,9 @@
  *  음성 캐시(AUDIO)는 파일명이 바뀌지 않는 한 그대로 유지합니다.
  */
 
-const SHELL_VER = 'v6';   // 제목 번호 낭독 일괄 교정
+const SHELL_VER = 'v7';   // 제목에서 권·과 번호 제거
 const SHELL = `mv3-shell-${SHELL_VER}`;
-const AUDIO = 'mv3-audio-v6';
+const AUDIO = 'mv3-audio-v7';
 const FONT  = 'mv3-font-v1';
 
 const SHELL_FILES = [

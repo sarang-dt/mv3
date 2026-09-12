@@ -1276,7 +1276,7 @@ function renderContent() {
     const w = WEEKS[week];
     $content.innerHTML = `
         <div class="theme-row">
-            <div class="theme-badge">${w.label} · ${w.theme[lang]}</div>
+            <div class="theme-badge">${w.theme[lang]}</div>
         </div>
         ${w.verses.map((v,i) => `
             <div class="verse-card" id="card-${i}">
