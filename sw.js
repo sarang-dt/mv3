@@ -9,7 +9,7 @@
  *  음성 캐시(AUDIO)는 파일명이 바뀌지 않는 한 그대로 유지합니다.
  */
 
-const SHELL_VER = 'v8';   // 한글 구절 4개 재녹음
+const SHELL_VER = 'v9';   // 로마서 8장 본문에 절 번호 표시
 const SHELL = `mv3-shell-${SHELL_VER}`;
 const AUDIO = 'mv3-audio-v8';
 const FONT  = 'mv3-font-v1';
