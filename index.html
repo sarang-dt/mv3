@@ -562,6 +562,110 @@
             from { transform: scaleY(0.4); }
             to   { transform: scaleY(1); }
         }
+        /* ── 앱 정보 (버전 · 새로고침) ─────────────── */
+        .app-info {
+            margin: 4px 0 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--border2);
+            background: var(--surface);
+        }
+        .app-info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .app-ver {
+            font-size: 0.8rem;
+            color: var(--text2);
+            font-variant-numeric: tabular-nums;
+        }
+        .refresh-btn {
+            flex-shrink: 0;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--accent-border);
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 0.82rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .refresh-btn:disabled { opacity: 0.5; cursor: default; }
+        .audio-clear {
+            display: block;
+            margin-top: 10px;
+            padding: 2px 0;
+            border: none;
+            background: none;
+            color: var(--text3);
+            font-size: 0.72rem;
+            font-family: inherit;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            cursor: pointer;
+        }
+        .audio-clear:disabled { opacity: 0.5; cursor: default; }
+
+        /* ── 토스트 · 새 버전 배너 ─────────────────── */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(120px + env(safe-area-inset-bottom));
+            transform: translate(-50%, 12px);
+            width: max-content;
+            max-width: calc(100% - 40px);
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: #1b2438;
+            border: 1px solid var(--border2);
+            color: var(--text1);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            z-index: 300;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); }
+        .update-banner {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 24px);
+            max-width: 496px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 10px 10px 16px;
+            border-radius: 14px;
+            background: #1b2438;
+            border: 1px solid var(--accent-border);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+            color: var(--text1);
+            font-size: 0.88rem;
+            font-weight: 600;
+            z-index: 300;
+        }
+        .update-banner[hidden] { display: none; }
+        .update-banner button {
+            flex-shrink: 0;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: none;
+            background: var(--accent);
+            color: #0b0f1a;
+            font-size: 0.84rem;
+            font-weight: 800;
+            font-family: inherit;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -638,6 +742,13 @@
     </div>
 </div>
 
+<!-- 새 버전 알림 · 토스트 -->
+<div class="update-banner" id="updateBanner" role="status" hidden>
+    <span>새 내용이 있습니다</span>
+    <button id="updateApply">지금 적용</button>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <!-- Settings Sheet -->
 <div class="overlay" id="overlay">
     <div class="sheet">
@@ -679,6 +790,13 @@
             <button class="ropt"     data-val="10">10회</button>
             <button class="ropt"     data-val="20">20회</button>
             <button class="ropt inf sel" data-val="0">∞</button>
+        </div>
+        <div class="app-info">
+            <div class="app-info-row">
+                <span class="app-ver" id="appVer">버전 확인 중…</span>
+                <button class="refresh-btn" id="refreshBtn">새로고침</button>
+            </div>
+            <button class="audio-clear" id="audioClearBtn">저장된 음성 지우기</button>
         </div>
         <button class="sheet-close" id="sheetClose">확인</button>
     </div>
@@ -1361,7 +1479,7 @@ function updateSummary() {
     $settingsSummary.textContent = `${L} · ${G} · ${M}`;
 }
 
-function openSettings()  { $overlay.classList.add('show'); }
+function openSettings()  { $overlay.classList.add('show'); askSW(); }
 function closeSettings() { $overlay.classList.remove('show'); }
 
 // 선택 변경 시: 화면 텍스트를 다시 그리고, 재생 중이면 새 음성으로 재시작
@@ -1654,6 +1772,11 @@ function setupEvents() {
     $overlay.addEventListener('click', e => { if (e.target === $overlay) closeSettings(); });
     $sheetClose.addEventListener('click', closeSettings);
 
+    // 앱 새로고침 · 저장된 음성 지우기 · 새 버전 적용
+    $refreshBtn.addEventListener('click', refreshApp);
+    $audioClearBtn.addEventListener('click', clearAudio);
+    document.getElementById('updateApply').addEventListener('click', () => location.reload());
+
     // 반복 횟수
     document.querySelectorAll('.ropt').forEach(btn => {
         btn.addEventListener('click', () => setRepeat(parseInt(btn.dataset.val)));
@@ -1678,11 +1801,153 @@ function setupEvents() {
 // ═══════════════════════════════════════════════════════
 //  초기화
 // ═══════════════════════════════════════════════════════
+// ── 앱 새로고침 · 버전 표시 ──────────────────────────
+//  화면 캐시(-shell-)만 새로 받는다.
+//  음성 캐시(-audio-)는 [저장된 음성 지우기]를 눌렀을 때만 지운다.
+const SHELL_WARM = [
+    './', './index.html', './manifest.json', './logo_Sarang.png',
+    './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png',
+];
+const REFRESHED_KEY = 'mv-refreshed';
+const $appVer        = document.getElementById('appVer');
+const $refreshBtn    = document.getElementById('refreshBtn');
+const $audioClearBtn = document.getElementById('audioClearBtn');
+const $toast         = document.getElementById('toast');
+const $updateBanner  = document.getElementById('updateBanner');
+let toastTimer = null;
+let refreshing = false;
+
+function showToast(msg, sticky = false) {
+    clearTimeout(toastTimer);
+    $toast.textContent = msg;
+    $toast.classList.add('show');
+    if (!sticky) toastTimer = setTimeout(() => $toast.classList.remove('show'), 2600);
+}
+
+function swSupported() {
+    return 'serviceWorker' in navigator
+        && (location.protocol === 'https:' || location.hostname === 'localhost');
+}
+
+// 서비스워커에게 버전·저장된 음성 개수를 묻는다 (답은 onSWMessage 로 온다)
+async function askSW() {
+    if (!swSupported()) { $appVer.textContent = '버전 정보 없음'; return; }
+    try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sw  = navigator.serviceWorker.controller || reg?.active;
+        if (!sw) return;          // 설치 중 — controllerchange 때 다시 묻는다
+        sw.postMessage({ type: 'version' });
+        sw.postMessage({ type: 'audio-status' });
+    } catch {}
+}
+
+function onSWMessage(e) {
+    const d = e.data || {};
+    if (d.type === 'version') {
+        $appVer.textContent = `버전 ${d.shell}`;
+    } else if (d.type === 'audio-status') {
+        $audioClearBtn.textContent = d.cached > 0
+            ? `저장된 음성 지우기 (${d.cached}개)`
+            : '저장된 음성 지우기';
+    }
+}
+
+// 설치 중인 새 서비스워커가 자리 잡을 때까지 기다린다
+function waitForWorker(reg, ms = 10000) {
+    const w = reg.installing || reg.waiting;
+    if (!w) return Promise.resolve();
+    return new Promise(res => {
+        const t = setTimeout(res, ms);
+        w.addEventListener('statechange', () => {
+            if (w.state === 'activated' || w.state === 'redundant') { clearTimeout(t); res(); }
+        });
+    });
+}
+
+async function refreshApp() {
+    if (refreshing) return;
+    if (!navigator.onLine) { showToast('인터넷에 연결된 뒤 다시 눌러 주세요'); return; }
+    refreshing = true;
+    $refreshBtn.disabled = true;
+    $updateBanner.hidden = true;
+    showToast('최신 내용을 받는 중입니다…', true);
+
+    // 서버에 닿는지 먼저 확인 — 안 되면 아무것도 지우지 않는다
+    try {
+        const probe = await fetch(`sw.js?probe=${Date.now()}`, { cache: 'no-store' });
+        if (!probe.ok) throw new Error('probe');
+    } catch {
+        refreshing = false;
+        $refreshBtn.disabled = false;
+        showToast('연결이 불안정합니다. 잠시 후 다시 눌러 주세요');
+        return;
+    }
+
+    try {
+        const reg = swSupported() ? await navigator.serviceWorker.getRegistration() : null;
+        if (reg) {
+            await reg.update().catch(() => {});
+            await waitForWorker(reg);
+        }
+        if ('caches' in window) {
+            for (const k of await caches.keys())
+                if (k.includes('-shell-')) await caches.delete(k);
+            // 새로 받아 화면 캐시를 다시 채운다 (오프라인에서도 열리도록)
+            await Promise.all(SHELL_WARM.map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+        }
+    } catch {}
+
+    try { sessionStorage.setItem(REFRESHED_KEY, '1'); } catch {}
+    location.reload(true);
+}
+
+// [새로고침] 뒤 다시 열렸을 때 알려 준다
+function showRefreshedToast() {
+    try {
+        if (sessionStorage.getItem(REFRESHED_KEY) !== '1') return;
+        sessionStorage.removeItem(REFRESHED_KEY);
+    } catch { return; }
+    showToast('최신 상태입니다');
+}
+
+async function clearAudio() {
+    if (!confirm('저장된 음성이 모두 지워집니다. 다시 들으려면 데이터가 필요합니다.')) return;
+    if (!('caches' in window)) return;
+    $audioClearBtn.disabled = true;
+    try {
+        for (const k of await caches.keys())
+            if (k.includes('-audio-')) await caches.delete(k);
+        $audioClearBtn.textContent = '저장된 음성 지우기';
+        showToast('저장된 음성을 지웠습니다');
+    } catch {
+        showToast('지우지 못했습니다. 다시 눌러 주세요');
+    }
+    $audioClearBtn.disabled = false;
+}
+
+// 새 서비스워커가 설치되면 상단 배너로 알린다 (처음 설치는 제외)
+function watchForUpdate(reg) {
+    const track = (w) => {
+        if (!w) return;
+        w.addEventListener('statechange', () => {
+            if (w.state === 'installed' && navigator.serviceWorker.controller && !refreshing)
+                $updateBanner.hidden = false;
+        });
+    };
+    if (reg.installing) track(reg.installing);
+    reg.addEventListener('updatefound', () => track(reg.installing));
+    reg.update().catch(() => {});
+}
+
 // 홈 화면 설치·오프라인 재생을 담당하는 서비스워커
 function registerSW() {
-    if (!('serviceWorker' in navigator)) return;
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    if (!swSupported()) { $appVer.textContent = '버전 정보 없음'; return; }
+    navigator.serviceWorker.addEventListener('message', onSWMessage);
+    navigator.serviceWorker.addEventListener('controllerchange', askSW);
+    navigator.serviceWorker.startMessages?.();
+    navigator.serviceWorker.register('sw.js')
+        .then(reg => { watchForUpdate(reg); askSW(); })
+        .catch(() => {});
 }
 
 function init() {
@@ -1698,6 +1963,7 @@ function init() {
     renderTabs();
     selectWeek(0);
     setupEvents();
+    showRefreshedToast();
 }
 init();
 </script>

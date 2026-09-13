@@ -9,7 +9,7 @@
  *  음성 캐시(AUDIO)는 파일명이 바뀌지 않는 한 그대로 유지합니다.
  */
 
-const SHELL_VER = 'v12';  // 여러 절 본문에 절 번호 표시
+const SHELL_VER = 'v13';  // 앱 새로고침 · 버전 표시
 const SHELL = `mv3-shell-${SHELL_VER}`;
 const AUDIO = 'mv3-audio-v8';
 const FONT  = 'mv3-font-v1';
@@ -96,8 +96,12 @@ self.addEventListener('fetch', (e) => {
   }
 });
 
-/** 앱에서 캐시 상태를 물어볼 때 */
+/** 앱에서 캐시 상태·버전을 물어볼 때 */
 self.addEventListener('message', (e) => {
+  if (e.data?.type === 'version') {
+    e.source?.postMessage({ type: 'version', shell: SHELL_VER, audio: AUDIO });
+    return;
+  }
   if (e.data?.type !== 'audio-status') return;
   e.waitUntil((async () => {
     const c = await caches.open(AUDIO);
